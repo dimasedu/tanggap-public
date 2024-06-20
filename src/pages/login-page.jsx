@@ -6,6 +6,9 @@ import AuthLayout from "@/layouts/auth-layout";
 import { Link } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import { useNavigate } from "react-router-dom";
+import {useState, useEffect} from 'react';
+import { Badge } from "lucide-react";
+import axios from "axios";
 
 const SideAuth = () => {
   return (
@@ -17,21 +20,77 @@ const SideAuth = () => {
 };
 
 const LoginForm = () => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  //define state validation
+  const [validation, setValidation] = useState([]);
+  const [errormsg, setError] = useState([]);
+
+  //define history
   const navigate = useNavigate();
+
+  const loginHandler = async(e) => {
+    e.preventDefault();
+    
+    //initialize formData
+    const formData = new FormData();
+
+    //append data to formData
+    formData.append('email', email);
+    formData.append('password', password);
+
+    //send data to server
+    await axios.post('http://202.10.41.84:5000/api/admin/login', formData,{})
+    .then((response) => {
+
+      if(response.data.data.level == "member"){
+        //set token on localStorage
+        localStorage.setItem('token', response.data.data.token);
+        localStorage.setItem('iduser', response.data.data.id);
+        localStorage.setItem('username', response.data.data.username);
+        localStorage.setItem('namadepan', response.data.data.nama_depan);
+        localStorage.setItem('namabelakang', response.data.data.nama_belakang);
+        localStorage.setItem('alamat', response.data.data.alamat);
+        localStorage.setItem('role', response.data.data.level);
+        navigate('/');
+     } else {
+       setError({message : 'Login Gagal! Anda bukan member. Silahkan coba kembali'});
+     }
+    })
+    .catch((error) => {
+
+        setError({message :error.response.data.message});
+        console.log(error.response.data.message);
+    })
+
+        // navigate('/home');
+
+}
 
   return (
     <div className="flex border-l-8 border-[rgba(0,_163,_232,_1)]  overflow-y-auto overflow-x-hidden justify-center  lg:col-span-3 ">
       <div className="mx-auto  w-full max-w-[600px] pt-[100px]">
+        <form onSubmit={loginHandler}>
         <div className="gap-6 grid pb-10">
           <div className="grid gap-2 ">
             <h1 className="text-3xl font-bold">Masuk</h1>
           </div>
           <div className="grid gap-9">
+          {
+            errormsg.message && (
+              <div className="bg-red-600 text-white mt-[10px]">
+              <div className="px-[64px] py-6">
+                <h1 className="font-medium text-sm">{ errormsg.message}</h1>
+              </div>
+            </div>
+            )
+        }
             <div className="grid gap-2">
               <Label htmlFor="email" className="text-text16_24 text-slate-500">
                 Email
               </Label>
-              <Input id="email" type="email" placeholder="Masukan Email Anda" required />
+              <Input id="email" type="email" placeholder="Masukan Email Anda" required value={email} onChange={(e) => setEmail(e.target.value)}/>
             </div>
             <div className="grid gap-2">
               <div className="flex items-center">
@@ -39,12 +98,12 @@ const LoginForm = () => {
                   Kata Sandi
                 </Label>
               </div>
-              <Input id="password" type="password" placeholder="Masukan Kata Sandi" required />
+              <Input id="password" type="password" placeholder="Masukan Kata Sandi" required value={password} onChange={(e) => setPassword(e.target.value)}/>
             </div>
             <div className="w-full space-y-3">
-              <Button onClick={() => navigate("/")} className="w-full  text-[16px] leading-[24px]  ">
-                Masuk
-              </Button>
+            <Button type="submit" className="w-full h-[50px] text-[16px] leading-[24px] bg-[rgba(0,_132,_214,_1)] ">
+                  Masuk
+                </Button>
 
               <span className="text-text16_24 block text-slate-500">
                 Belum punya akun?{" "}
@@ -75,6 +134,7 @@ const LoginForm = () => {
             </div>
           </div>
         </div>
+        </form>
       </div>
     </div>
   );

@@ -1,7 +1,8 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Menu, Package2 } from "lucide-react";
 import { MdNotifications, MdAccountCircle } from "react-icons/md";
 import { Button } from "@/components/ui/button";
+import { FaRegUser } from "react-icons/fa";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/tailwind-utils";
+
 
 const Notification = () => {
   return (
@@ -43,6 +45,22 @@ const NavlinkItem = ({ to, label }) => {
 };
 
 const Navbar = ({ className }) => {
+  const username = localStorage.getItem('username');
+  const namadepan = localStorage.getItem('namadepan');
+  const namabelakang = localStorage.getItem('namabelakang');
+
+  const navigate = useNavigate();
+  const logoutHandler = (e) => {
+  e.preventDefault();
+
+  if(confirm('Apakah yakin akan keluar?')){
+    localStorage.clear();
+  navigate('/');
+  }
+
+
+  }
+
   const navitem = [
     {
       to: "/",
@@ -82,6 +100,15 @@ const Navbar = ({ className }) => {
             {navitem.map((item, i) => (
               <NavlinkItem key={i} {...item} />
             ))}
+
+            {!username && (
+              <NavlinkItem
+                to={"/login"}
+                className="text-muted-foreground hover:text-foreground"
+                label='Login Member'
+              />
+              
+              )}
           </div>
         </nav>
         <Sheet>
@@ -128,9 +155,14 @@ const Navbar = ({ className }) => {
               >
                 Customers Service
               </Link>
+
+              
             </nav>
           </SheetContent>
         </Sheet>
+        {
+          username && (
+       
         <div className="flex w-max items-center gap-4  md:gap-2 lg:gap-6">
           <Notification />
           <DropdownMenu>
@@ -150,13 +182,15 @@ const Navbar = ({ className }) => {
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem>
-                <Link to={"/login"} className="w-full">
+                <Button className="w-full" onClick={logoutHandler}>
                   Keluar
-                </Link>
+                </Button>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+          )
+ }
       </header>
     </div>
   );

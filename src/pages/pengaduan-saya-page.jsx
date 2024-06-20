@@ -13,6 +13,9 @@ import { Button } from "@/components/ui/button";
 import { FaHourglassHalf, FaCircleCheck } from "react-icons/fa6";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useRef, useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import { formatDate } from "date-fns";
 
 const PENGADUAN_STEPS = [
   {
@@ -125,12 +128,12 @@ export const PengaduanSayaPage = () => {
           </div>
           <FaChevronRight className="w-6 h-6" />
         </div>
-        <div className="flex rounded-[10px] cursor-pointer items-center justify-between border py-2 px-4 ">
+        <div className="flex rounded-[10px] cursor-pointer items-center justify-between border py-2 px-4 " onClick={logout()}>
           <div className="gap-x-2 flex items-center">
             <div className="flex items-center justify-center w-12 h-12  bg-color-1 text-white rounded-full">
               <TbLogout2 className="w-6 h-6 flex-shrink-0" />
             </div>
-            <h1>Keluar</h1>
+            <h1>Keluar Sistem</h1>
           </div>
           <FaChevronRight className="w-6 h-6" />
         </div>
@@ -149,6 +152,15 @@ const ProfilePage = () => {
     name: "",
     code: "",
   });
+  const navigate = useNavigate();
+
+  const [aduan, setAduan] = useState([]);
+  const [msgsuccess, setMessage] = useState([]);
+
+  const token = localStorage.getItem('token');
+  axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  const id = localStorage.getItem('iduser');
+  const formData = new FormData();
 
   const handleStep = () => {
     setCurrentStep((prevStep) => {
@@ -182,89 +194,154 @@ const ProfilePage = () => {
     });
     handleStep();
   };
+
+  const batalkanHandler = async(idaduan) => {
+    
+    if(confirm('Apakah yakin akan membatalkan Pengaduan anda?')){
+      formData.append('status','batal');
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        await axios.put(`http://202.10.41.84:5000/api/aduan/update/${idaduan}`,formData);
+        getAduan();
+        setMessage({message:'Data pengaduan berhasil dibatalkan'});
+    }
+  }
+
+  const bukaHandler = async(idaduan) => {
+    if(confirm('Apakah yakin akan membuka kembali Pengaduan anda?')){
+      formData.append('status','baru');
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        await axios.put(`http://202.10.41.84:5000/api/aduan/update/${idaduan}`,formData);
+        getAduan();
+        setMessage({message:'Data pengaduan berhasil dibuka kembali'});
+    }
+  }
+
+  
+
+  const getAduan = async()=>{
+
+  //append data to formData
+  formData.append('iduser', id);
+    await axios.post('http://202.10.41.84:5000/api/aduan/listuser',formData)
+      .then(response => {
+        setAduan(response.data.data);
+      })
+      .error(error => {
+        console.log(error);
+      })
+  }
+
+  // const authCheck = async() => {
+  //   if(!id || id === null){
+  //     navigate('/login');
+  //   }
+  // }
+
+  
+
+  //hook useEffect
+useEffect(() => {
+      
+  // authCheck();
+  //call method "fetchDetailPost"
+  getAduan();
+}, []);
+
+
   return (
     <ProfileLayout>
       <div className="px-[64px] ">
         <h1 className="font-bold text-2xl">Pengaduan Saya</h1>
       </div>
 
+      {
+        msgsuccess.message && (
+          <div className="bg-green-400 text-white mt-[10px]">
+            <div className="px-[64px] py-6">
+              <h1 className="font-medium text-sm">{msgsuccess.message}</h1>
+            </div>
+          </div>
+        )
+      }
+
       <div className="pt-[22px] px-[64px] space-y-10">
-        <div className=" space-y-5 flex flex-col items-end">
+      {
+                    aduan.length > 0
+                        ? aduan.map((row, index) => (
+<div className=" space-y-5 flex flex-col items-end">
           <div className="space-y-5 w-full">
             <div className="flex justify-between items-center">
-              <div className="flex items-center gap-3 text-[rgba(0,_163,_232,_1)]">
+            {row.status === 'baru' && (
+            <div className="flex items-center gap-3 text-[rgba(0,_163,_232,_1)]">
+                {" "}
+                
+                <span>Menunggu Ditinjau</span>
+              </div>
+            )}
+            {row.status === 'proses' && (
+            <div className="flex items-center gap-3 text-[rgba(0,_163,_232,_1)]">
                 {" "}
                 <FaHourglassHalf className="w-6 h-6" />
                 <span>Pengaduan dalam proses</span>
               </div>
-              <span className="text-slate-500">05 Mei 2024</span>
-            </div>
-            <div className="flex items-center gap-x-6">
-              <img src="/images/jalan-rusak.svg" className="w-[120px] h-[90px]" />
-              <div className="space-y-2">
-                <h1 className="text-xl font-bold">Jalan Rusak</h1>
-                <p className="text-sm">Setiap hari aku melewati jalan raya Cileunyi selalu macet karena</p>
-              </div>
-            </div>
-            <div className="flex  items-center gap-x-5">
-              <Button className="w-full" variant="destructive">
-                Batalkan pengaduan
-              </Button>
-              <Button onClick={() => setTinjauId((prev) => !prev)} className="w-full">
-                {tinjauId ? "Tutup Tinjau Pengaduan" : "Tinjau Pengaduan"}
-              </Button>
-            </div>
-          </div>
-          {tinjauId && (
-            <div className="max-w-[500px] border rounded-[8px] p-5  space-y-5 w-full">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3 text-[rgba(0,_163,_232,_1)]">
-                  {" "}
-                  <FaHourglassHalf className="w-4 h-4" />
-                  <span className="text-sm">Pengaduan dalam proses</span>
-                </div>
-                <span className="text-slate-500 text-sm">05 Mei 2024</span>
-              </div>
+            )}
+            
 
-              <div className="flex items-center gap-5">
-                <img src="/images/foto_aduan.svg" className="object-cover w-[80px] h-[80px] rounded-[10px]" />
-                <div>
-                  <h1 className="text-text16_24 font-semibold">Jalan Rusak</h1>
-                  <p className="text-sm">
-                    Setiap hari aku melewati jalan raya Cileunyi selalu macet karena adanya jalan rusak, mohon diperhatikan untuk
-                    pemerintah setempat semoga jalan cepat di perbaiki.
-                  </p>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div>
-                <PengaduanStepper stepsConfig={PENGADUAN_STEPS} currentStep={currentStep} isComplete={isComplete} />
-              </div>
-            </div>
-          )}
-        </div>
-
-        <Separator className="h-2 rounded-md" />
-        <div className="space-y-5">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3 text-[rgba(76,_175,_80,_1)]">
-              {" "}
+              {row.status === 'selesai' && (
+              <div className="flex items-center gap-3 text-[rgba(76,_175,_80,_1)]">
+              
               <FaCircleCheck className="w-6 h-6" />
               <span>Pengaduan selesai</span>
+              </div>
+              )}
+
+              {row.status === 'batal' && (
+              <div className="flex items-center gap-3 text-red-500">
+              
+             
+              <span>X Pengaduan Dibatalkan</span>
+              </div>
+              )}
+              <span className="text-slate-500">{formatDate(row.createdAt, 'dd/mm/yyyy')}</span>
             </div>
-            <span className="text-slate-500">05 Mei 2024</span>
-          </div>
-          <div className="flex items-center gap-x-6">
-            <img src="/images/trotoar-ancur.svg" className="w-[120px] h-[90px]" />
-            <div className="space-y-2">
-              <h1 className="text-xl font-bold">Trotoar Ancur</h1>
-              <p className="text-sm">Trotoar dijalan pahlawan ancur tidak enak dipandang mohon segera....</p>
+            <div className="flex items-center gap-x-6">
+              <img src={row.foto} className="w-[120px] h-[90px]" />
+              <div className="space-y-2">
+                <h1 className="text-xl font-bold">{row.judul}</h1>
+                <p className="text-sm">{row.uraian}</p>
+              </div>
+            </div>
+            <div className="flex  items-center">
+            
+
+            {(row.status === 'selesai' || row.status === 'batal') && (
+              <Button className="w-full" onClick={() => bukaHandler((row.id))}>Buka Kembali Pengaduan</Button>
+              )}
+
+              {(row.status === 'baru' || row.status === 'proses') && (
+              <Button className="w-full" variant="destructive" onClick={() => batalkanHandler((row.id))}>
+                Batalkan pengaduan
+              </Button>
+              )}
+
+              
+              
+
+              
             </div>
           </div>
-          <Button className="w-full">Buka Kembali Pengaduan</Button>
+          
         </div>
+
+                        ))
+            : (
+              <div className="bg-red-400 text-white mt-[10px]">
+            <div className="px-[64px] py-6">
+              <h1 className="font-medium text-sm">Data Aduan tidak tersedia</h1>
+            </div>
+          </div>
+            ) 
+          }                
       </div>
     </ProfileLayout>
   );

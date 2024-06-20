@@ -14,6 +14,8 @@ import AppLayout from "@/layouts/app-layout";
 import { cn } from "@/lib/tailwind-utils";
 import { useEffect, useRef, useState } from "react";
 import { HiStar } from "react-icons/hi";
+import axios from "axios";
+import { Link, useNavigate } from "react-router-dom";
 
 const daftarLayananAduan = [
   {
@@ -163,6 +165,7 @@ const PengaduanAlert = ({ isState, handleState }) => {
               setempat.
             </p>
           </div>
+          
           <Button onClick={() => handleState(!isState)} className="w-full">
             Selesai{" "}
           </Button>
@@ -183,6 +186,49 @@ const PengaduanPage = () => {
     code: "",
   });
 
+  const [judul, setJudul] = useState('');
+  const [lokasi, setLokasi] = useState('');
+  const [uraian, setUraian] = useState('');
+  const [image, setImage] = useState('');
+  const [preview, setPreview] = useState("");
+
+  const [errormsg, setError] = useState([]);
+
+  const nama_depan = localStorage.getItem('namadepan');
+  const nama_belakang = localStorage.getItem('namabelakang');
+  const alamat = localStorage.getItem('alamat');
+  const userId = localStorage.getItem('iduser');
+
+  const navigate = useNavigate();
+  
+  const validasi = ()=>{
+
+
+    if(judul === ""){
+      setError({message:'Judul tidak boleh kosong'});
+    }
+
+    if(lokasi === ""){
+      setError({message:'Lokasi tidak boleh kosong'});
+    }
+
+    if(uraian === ""){
+      setError({message:'Uraian tidak boleh kosong'});
+    }
+
+  }
+
+   //method handle file change
+   const handleFileChange = (e) => {
+      setImage(e.target.files[0]);
+  }
+
+  const loadImage = (e) => {
+    const image = e.target.files[0];
+    setImage(image);
+    setPreview(URL.createObjectURL(image));
+  };
+
   const handleStep = () => {
     setCurrentStep((prevStep) => {
       if (choosedLayananAduan?.name) {
@@ -195,6 +241,7 @@ const PengaduanPage = () => {
         return prevStep + 1;
       }
     });
+    
   };
 
   const handleIsState = (isState) => {
@@ -203,9 +250,9 @@ const PengaduanPage = () => {
       name: "",
       code: "",
     });
-    setCurrentStep(1);
     setIsComplete(false);
     setIsNextForm(false);
+    navigate('/pengaduan-saya');
   };
 
   const handleAduan = (layananAduan) => {
@@ -215,6 +262,41 @@ const PengaduanPage = () => {
     });
     handleStep();
   };
+
+  const savePengaduan = async(e) =>{
+    // e.preventDefault();
+    
+    //initialize formData
+    const formData = new FormData();
+
+    //append data
+    formData.append('foto', image);
+    formData.append('judul', judul);
+    formData.append('uraian', uraian);
+    formData.append('lokasi', lokasi);
+    formData.append('userId',userId);
+
+
+    const token = localStorage.getItem('token');
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    //send data with API
+    await axios.post('http://202.10.41.84:5000/api/aduan/create', formData,{
+      headers: {
+        "Content-type": "multipart/form-data",
+      },
+    }).then(() => {
+            
+            //redirect to posts index
+            navigate('/pengaduan-saya');
+
+        })
+        .catch(error => {
+            
+            //set errors response to state "errors"
+            setError(error.response.data);
+        })
+
+  }
 
   return (
     <AppLayout className={"px-4 md:px-6  z-30 max-w-screen-xl mx-auto "}>
@@ -251,7 +333,16 @@ const PengaduanPage = () => {
               })}
             >
               <div className="border w-full rounded-[10px] p-6 space-y-6">
-                <form className="space-y-10 flex flex-col">
+              {
+                  errormsg.message && (
+                    <div className="bg-red-600 text-white mt-[10px]">
+                    <div className="px-[64px] py-6">
+                      <h1 className="font-medium text-sm">{ errormsg.message}</h1>
+                    </div>
+                  </div>
+                  )
+              }
+                <form className="space-y-10 flex flex-col" onSubmit={savePengaduan}>
                   {currentStep === 1 ? (
                     <div className="w-full space-y-10">
                       <div className="grid gap-2">
@@ -260,14 +351,15 @@ const PengaduanPage = () => {
                         </Label>
                         <Input
                           type="text"
-                          className="border-slate-400 focus-visible:ring-color-2 focus-visible:border-color-2 text-text16_24"
+                          className="border-slate-400 focus-visible:ring-color-2 focus-visible:border-color-2 text-text16_24" 
+                          value={judul} onChange={(e) => setJudul(e.target.value)}
                         />
                       </div>
                       <div className="grid gap-2">
                         <Label className="flex text-text16_24">
                           Uraian <HiStar className="h-2 w-2 text-red-600" />
                         </Label>
-                        <Textarea className="border-slate-400 focus-visible:ring-color-2 focus-visible:border-color-2 text-text16_24" />
+                        <Textarea className="border-slate-400 focus-visible:ring-color-2 focus-visible:border-color-2 text-text16_24" value={uraian} onChange={(e) => setUraian(e.target.value)}/>
                       </div>
                       <div className="grid gap-2">
                         <Label className="flex text-text16_24">
@@ -277,6 +369,7 @@ const PengaduanPage = () => {
                         <Input
                           type="text"
                           className="border-slate-400 focus-visible:ring-color-2 focus-visible:border-color-2 text-text16_24"
+                          value={lokasi} onChange={(e) => setLokasi(e.target.value)}
                         />
                       </div>
                     </div>
@@ -293,6 +386,7 @@ const PengaduanPage = () => {
                         <Input
                           type="file"
                           className="items-center justify-center flex"
+                          onChange={loadImage}
                         />
                       </div>
                     </div>
@@ -305,26 +399,32 @@ const PengaduanPage = () => {
                         />
                         <div>
                           <h1 className="text-text16_24 font-semibold">
-                            Muhammad Aziz
+                            {nama_depan} {nama_belakang}
                           </h1>
                           <p className="text-sm text-slate-500">
-                            Cibeunying Kaler
+                            {alamat}
                           </p>
                         </div>
                       </div>
-                      <img
+
+                      {preview ? (
+                        <img
+                        src={preview}
+                        className="w-full h-full max-w-[500px]"
+                      /> 
+                      ) : (
+                        ""
+                      )}
+                      {/* <img
                         src="/images/foto_aduan.svg"
                         className="w-full h-full max-h-[300px]"
-                      />
+                      /> */}
                       <div>
                         <h1 className="text-text16_24 font-semibold">
-                          Jalan Rusak
+                          {judul}
                         </h1>
                         <p className="text-sm text-slate-700">
-                          Setiap hari aku melewati jalan raya Cileunyi selalu
-                          macet karena adanya jalan rusak, mohon diperhatikan
-                          untuk pemerintah setempat semoga jalan cepat di
-                          perbaiki!!!
+                          {uraian}
                         </p>
                       </div>
                     </div>
@@ -376,6 +476,7 @@ const PengaduanPage = () => {
                           e.preventDefault();
                           e.stopPropagation();
                           setIsState(true);
+                          savePengaduan();
                         }}
                       >
                         Kirim
@@ -387,7 +488,6 @@ const PengaduanPage = () => {
             </div>
           </div>
         </div>
-
         {isState && (
           <PengaduanAlert isState={isState} handleState={handleIsState} />
         )}
